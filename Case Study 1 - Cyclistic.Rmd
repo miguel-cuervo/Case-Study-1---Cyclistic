@@ -1,0 +1,113 @@
+---
+title: "Case Study 1 - Cyclistic"
+author: "Miguel Cuervo"
+date: "2025-11-05"
+output: html_document
+---
+
+#1 Ask (Preguntar)
+El objetivo de este caso de estudio es responder a la pregunta: "¿Cómo usan los ciclistas ocasionales y los miembros anuales las bicicletas de manera diferente?" El objetivo es ayudar al equipo de marketing a diseñar una estrategia para convertir a los ciclistas ocasionales en miembros.
+
+#2 Prepare (Preparar)
+Usando los archivos de viaje del Q1_2019 y Q1_2020, se cargan las librerías necesarias y los dos archivos CSV en dataframes separados, combinándolos posteriormente.
+```{r}
+#------PREPARAR------
+#cargar libreria principal
+library(tidyverse)
+library(lubridate)
+
+#importar datasets en environment
+#cargar archivos csv con variable propia 
+trips_2019_Q1 <- read_csv("~/DATA ANALYSIS/PROYECT A/Divvy Tripdata (19-20 Q1)/Divvy_Trips_2019_Q1.csv")
+trips_2020_Q1 <- read_csv("~/DATA ANALYSIS/PROYECT A/Divvy Tripdata (19-20 Q1)/Divvy_Trips_2020_Q1.csv")
+
+#combinar dataframes en uno solo
+all_trips <- bind_rows(trips_2019_Q1,trips_2020_Q1) 
+
+```
+#3 Process (Procesar)
+Se crean nuevas columnas para duración de viajes y viajes por día según tipo de usuarios. Se filtran los viajes con tiempos menores a 1 minuto y mayores a 24 horas. Se filtran columnas innecesarias con información irrelevante para nuestro análisis.
+```{r}
+#------PROCESAR------
+#crear columnas ride length y day of week con mutate
+all_trips_v2 <- all_trips %>% 
+  #calculo de duracion del viaje en segundos
+  mutate(ride_lenght_sec = difftime(ended_at,started_at, units="secs"), 
+         #calculo de dia de semana dom = 1 sab =7
+         day_of_week = wday(started_at, week_start = 1))
+
+#filtrar viajes muy cortos o mayores a 24hrs
+all_trips_clean <- all_trips_v2 %>% 
+  filter(ride_lenght_sec>0,ride_lenght_sec>60,ride_lenght_sec<86400)
+all_trips_clean <- all_trips_clean %>% 
+  mutate(ride_lenght_min=ride_lenght_sec/60)
+  glimpse(all_trips_clean)
+  
+  #remover columnas con PII 
+  all_trips_final <- all_trips_clean %>%
+    select (-trip_id, 
+            -start_time, 
+            -end_time, 
+            -bikeid, 
+            -tripduration, 
+            -from_station_id, 
+            -from_station_name, 
+            -to_station_id,
+            -to_station_name,
+            -usertype,
+            -gender,
+            -birthyear)
+```
+#4 Analyze (Analizar)
+Se calcula el promedio de viajes por cada tipo de usuario, además del tiempo máximo por viaje y viajes por día.
+```{r}
+#------ANALIZAR------
+  #calcular promedio de viaje por tipo de miembro
+avg_ride_length = all_trips_final %>% 
+    group_by(member_casual) %>%
+   
+ #calcular promedio de duracion en minutos
+    summarise(average_ride_min = mean(ride_lenght_min),
+   
+ #calcular viaje maximo
+    max_ride_min = max(ride_lenght_min))
+
+    #calcular viajes por dia
+    rides_per_day <- all_trips_clean %>%
+    group_by(member_casual, day_of_week) %>%
+    summarise(number_of_rides = n())%>%
+    arrange(member_casual, day_of_week)
+```
+#5 Visualize (Visualizar)
+Se generan dos gráficos, el primero exponiendo la duración promedio en minutos por viaje según tipo de usuario. Y el segundo, analizando el número total de viajes por tipo de usuario dependiendo del día de la semana.
+```{r}
+#------VISUALIZACION------
+  library(ggplot2)
+  #Gráfico 1: Duración promedio del viaje (en minutos)
+    ggplot(data = avg_ride_length, aes(x = member_casual, y = average_ride_min, fill = member_casual)) +
+      geom_col() +
+      labs(
+        title = "Duración Promedio Por Viaje",
+        subtitle = "Comparativa directa entre viajeros ocasionales vs miembros",
+        x = "Tipo de Usuario",
+        y = "Duración Promedio (Minutos)") + theme_minimal()
+    ggsave("avg_ride_length_chart.png")
+   
+     # Gráfico 2: Número de viajes por día de la semana
+    ggplot(data = rides_per_day, aes(x = day_of_week, y = number_of_rides, color = member_casual, group = member_casual)) +
+      geom_line(linewidth = 1.5) + # 'linewidth' en lugar de 'size'
+      geom_point(size = 3) +
+      labs(
+        title = "Volumen de Viajes por Día de la Semana",
+        subtitle = "Miembros = Semana Laboral (Commute) | Ocasionales = Fin de Semana (Ocio)",
+        x = "Día de la Semana (1=Dom, 7=Sáb)",
+        y = "Número Total de Viajes" ) +
+      scale_color_manual(values = c("casual" = "orange", "member" = "darkblue")) +
+      theme_minimal() 
+    ggsave("rides_per_day_chart.png")
+```
+#6 Act (Actuar)
+Analizando los datos y las gráficas generadas, nos damos cuenta que los usuarios ocasionales tienen una tendencia a usar el servicio de manera más elevada en fines de semana, registrando paseos largos de aproximadamente 40 minutos. Podemos asumir que los usuarios ocasionales son turistas y gente que sale de paseo en sus tiempos libres y no usan el servicio para asistir a sus trabajos y responsabilidades diarias como los miembros. Como parte final del análisis, sugiero los siguientes 3 acercamientos al problema planteado:
+1. Programa de referidos, ofrecer paquetes y precios especiales para viajes en conjunto y turísticos.
+Utilizar marketing enfocado en paseos largos y atractivos visuales de la ciudad, en lugar de centrarse en la rutina y el traslado diario.
+3. Crear un pase o paquete de fin de semana, con precios atractivos para los clientes que no piensan invertir en el servicio completo.
