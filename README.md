@@ -8,5 +8,6 @@ Repositorio de mi primer proyecto en el área de análisis de datos. Mi objetivo
 * **Ver análisis completo y recomendaciones en https://miguel-cuervo.github.io/case-study-1-cyclistic/**
   
 ## Contacto 
+¡Gracias por llegar hasta aquí! Espero que este pequeño inicio sea de tu interés y espero poder colaborar pronto.
 * **LinkedIn:** https://www.linkedin.com/in/miguel-a-cuervo-8388aa201/
 * **Correo:** mcuervo9@outlook.com 
